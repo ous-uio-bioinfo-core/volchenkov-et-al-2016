@@ -1,0 +1,16 @@
+"comparison","up","down"
+"B_beads...FS_beads",195,65
+"B_ThCSE...FS_ThCSE",310,223
+"B_Th...FS_Th",827,658
+"diff_ThCSE_beads",0,0
+"diff_Th_beads",5,2
+"diff_ThCSE_Th",0,0
+"FS_Th...FS_ThCSE",30,31
+"B_Th...B_ThCSE",142,50
+"FS_beads...FS_ThCSE",4,4
+"B_beads...B_ThCSE",30,47
+"B_beads...B_Th",516,572
+"FS_Th...FS_beads",36,14
+"oxygenFS...oxygenB",1672,1449
+"hyp_ThignoreCSE",1071,1055
+"diff_ThignoreCSE_beads",0,0

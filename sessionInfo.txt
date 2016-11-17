@@ -1,0 +1,15 @@
+R version 3.3.1 (2016-06-21)
+Platform: x86_64-apple-darwin13.4.0 (64-bit)
+Running under: OS X 10.11.6 (El Capitan)
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] gplots_3.0.1       RColorBrewer_1.1-2 limma_3.28.21     
+
+loaded via a namespace (and not attached):
+[1] tools_3.3.1        KernSmooth_2.23-15 gdata_2.17.0       caTools_1.17.1     bitops_1.0-6       gtools_3.5.0      
