@@ -1,8 +1,7 @@
 
 
 
-#########################################
-#library(lumi)
+### Load libs, make outputfolders
 library(limma)
 library(RColorBrewer)
 library(gplots)
@@ -18,10 +17,7 @@ plotdir= paste(outputdir, "/plots", sep="")
 if(!file.exists(plotdir))dir.create(plotdir)
 
 
-
-#########################################
-# Read data
-#########################################
+### Read data and sampleannotation. Should maybe be done directly from GEO rep when availible?
 
 # The datafile from GenomeStudio
 datafil <- "not_in_github/SampleGeneProfileQuantileNormalizedImputed.txt"
@@ -39,34 +35,12 @@ sa$combocell = factor(paste(sa$celltype,sa$addition, sep=""))
 sa$combogroup = factor(paste(sa$oxygen, sa$combocell,  sep="_"))
 sa$comboignoreCSE = factor(paste(sa$oxygen, sa$celltype,  sep="_"))
 
-# Her er liste for heatmap som skal vise forskjellene mellom celler i 21% O2.
-# Bruk bare prøver fra FS beads, FS_Th og FS_Th CSE. 
-selectedgenes = unique(scan("selectedgenes1.txt", what="character"))
-
-##### Soem QC plots.
-#### boxplot to se that data is normalized
-# png(file = paste(plotdir, "/boxplot.png", sep=""), pointsize = 12, width = 1400, height = 1400)
-# par(mfrow=c(2,1))
-# boxplot(log2(dataset$E), main="data from file")
-# boxplot((normalizeBetweenArrays(dataset)), main="qnorm in R")
-# dev.off()
-# looks like data was qnorm already as the filename implies.
-# only use the data from file. Not use qnorm in R.
-
-# plot a pca plot for a quick overview of sample correlations
-# colorpal = c("red", "blue", "black", "green", "cyan", "magenta")
-# png(file = paste(plotdir, "/pca_combogroup_colored.png", sep=""), pointsize = 12, width = 1400, height = 1400) 
-# thisprcomp=prcomp( t(dataset$E) )
-# thisprcomp=prcomp( t(ds) ) # was very similar
-# plot(thisprcomp$x, main="PCA-plot", cex.main=1, type="n")
-# text(thisprcomp$x, labels=sa$sampleid, col=colorpal[sa$combogroup], cex=3 )
-# legend("topright", legend=unique(sa$combogroup), text.col=colorpal[unique(sa$combogroup)])
-# dev.off()
-# does not seem to cluster to much based on treatments.
+# library(GEOquery)  
+# matrixeset=getGEO("GSE90882") # did not work. Repo was not accessible as long as it is private
 
 
-###############   LIMMA 
 
+### Find DEGs between a lot of groups using LIMMA 
 ds=log2(dataset$E)
 
 # The "diff" contrasts are interaction (using first method from limma guide)
@@ -74,7 +48,6 @@ ds=log2(dataset$E)
 # Which genes respond to hypoxia(B) differently in ThCSE compared to bead cells
 
 toptables = list()
-
 fac=factor(sa$combogroup)
 design = model.matrix(~0 + fac)
 colnames(design)=levels(fac)
@@ -92,12 +65,11 @@ cont.matrix = makeContrasts (
 	"B_beads - B_Th", 
 	"FS_Th - FS_beads",
 	levels=design)
-
+# not all contrasts are reported in the figures later!
 
 fit <- lmFit(ds, design)
 fit2 = contrasts.fit(fit, cont.matrix)
 fit2 <- eBayes(fit2) 
-
 fit2[["genes"]] <- data.frame( geneSymbol=rownames(fit))
 
 for(t in 1:dim(cont.matrix)[2])
@@ -110,6 +82,7 @@ for(t in 1:dim(cont.matrix)[2])
 	toptables[[this_coef]]=tab	
 }
 
+# selected groupings to be counted in venn diagrams
 vennnames = list(
 	effectspergroup = c("B_beads - FS_beads", "B_Th - FS_Th", "B_ThCSE - FS_ThCSE"),
 	diff_Th_beads = c("B_Th - FS_Th", "B_beads - FS_beads", "diff_Th_beads"),
@@ -117,10 +90,10 @@ vennnames = list(
 	diff_ThCSE_Th = c("B_ThCSE - FS_ThCSE", "B_Th - FS_Th", "diff_ThCSE_Th")
 )
 
+# Figure not included in manuscript
 pdf(file = paste(plotdir, "/venndiffcount.pdf", sep=""), width = 12, height = 12)
 par(mfrow=c(2,2))
 venninclude = "both"
-
 results <- decideTests(fit2)
 vennDiagram(results[,vennnames[[1]]], include=venninclude, cex=1)
 vennDiagram(results[,vennnames[[2]]], include=venninclude, cex=1)
@@ -128,24 +101,12 @@ vennDiagram(results[,vennnames[[3]]], include=venninclude, cex=1)
 vennDiagram(results[,vennnames[[4]]], include=venninclude, cex=1)
 dev.off()
 
+# Figure 4b
 pdf(file = paste(figuredir, "/figure4b.pdf", sep=""), width = 12, height = 12)
 results <- decideTests(fit2)
 vennDiagram(results[,c("B_beads - FS_beads", "B_Th - FS_Th", "B_ThCSE - FS_ThCSE")], include="both", cex=1)
 dev.off()
 
-
-
-
-
-for(vn in names(vennnames))
-{
-	tab = as.data.frame(results[,vennnames[[vn]]], stringsAsFactors=FALSE)
-	tab$pattern = apply(abs(tab), MARGIN=1, FUN=paste, collapse="x")
-	write.table(tab, file=paste(plotdir, "/venngenes_", vn, ".txt", sep=""), 
-							quote=FALSE, sep="\t", row.names=TRUE, col.names=NA)
-	
-}
-##
 
 # the effect of oxygen
 contrasts = c("oxygenFS - oxygenB")
@@ -189,7 +150,7 @@ for(t in 1:dim(cont.matrix)[2])
 }
 results =data.frame(results, decideTests(fit2))
 ## no genes found so maybe Th and ThCSE are not som similar.
-##
+
 
 summarytab = data.frame( comparison=names(results), up=colSums(results==1), down=colSums(results==-1))
 write.csv(summarytab, file=paste(genelistdir, "/", "summarycounts.csv", sep=""), row.names=FALSE)
@@ -223,7 +184,7 @@ heatmapwrapper = function(dsclust, salabels, main="", plotlegend=TRUE, plotlabRo
 
 
 
-#### Figure 4a
+# Figure 4a
 pdf(paste(figuredir, "/figure4a.pdf", sep=""))
 comp="B_Th - FS_Th"
 genes = as.character(toptables[[comp]][ toptables[[comp]]$"adj.P.Val"<0.05 ,"geneSymbol"])
@@ -235,13 +196,11 @@ heatmapwrapper(ds[genes,],
 dev.off()
 
 
-# 
-# extra plots for article.
 
+# Heatmaps not included in manuscript
 heatmapcomps = c("diff_Th_beads", "FS_Th - FS_ThCSE", "B_Th - B_ThCSE", 
 								 "FS_beads - FS_ThCSE", "B_beads - B_ThCSE", "FS_Th - FS_beads",
 								 "B_Th - FS_Th")
-
 for(comp in heatmapcomps)
 {
 	
@@ -251,14 +210,11 @@ for(comp in heatmapcomps)
 	heatmapwrapper(ds[genes,],
 								 sa$combogroup,
 								 main=paste("DEGs ", comp, sep=""), inset=c(-0.08,-0.15))
-	
 	dev.off()
-	
 }
 
+# Heatmap not included in manuscript
 pdf(paste(plotdir, "/heatmap_25percvariablegenes.pdf", sep=""))
-#genes = as.character(toptables[[comp]][ toptables[[comp]]$"adj.P.Val"<0.05 ,"geneSymbol"])
-
 salabels = sa$combogroup
 genevar = apply(ds, MARGIN=1, var)
 dsclust = ds[order(genevar, decreasing=TRUE),]
@@ -271,7 +227,6 @@ heatmapwrapper(dsclust[sel,],
 dev.off()
 
 # Figure 5
-# 
 metabolicgenes = unique(scan("metabolicgenes.txt", what="character"))
 pdf(paste(figuredir, "/figure5.pdf", sep=""))
 heatmapwrapper(ds[metabolicgenes,],
@@ -285,7 +240,7 @@ FScomps= c("FS_beads - FS_ThCSE", "FS_Th - FS_ThCSE", "FS_Th - FS_beads")
 FS_DEG=c()
 for(comp in FScomps)
 {
-	a=toptables[[comp]]$adj.P.Val < 0.05085
+	a=toptables[[comp]]$adj.P.Val < 0.05085  #NB odd cutoff, why was this used?
 	FS_DEG = c(FS_DEG, as.character(toptables[[comp]]$geneSymbol[a]))
 }
 
@@ -295,13 +250,12 @@ heatmapwrapper(ds[FS_DEG,a],
 							 sa$combogroup[a],
 							 main=paste("DEG between 21% O2", sep=""), dendrogram="both", plotlabRow=TRUE,
 							 inset=c(-0.03, -0.04))
-
 dev.off()
 
 
 # data file for GEO
-x = data.frame(ID_REF=rownames(dataset$E), dataset$E, check.names = FALSE)
-write.csv(x, file="not_in_github/geosubmission/matrix_table.csv", row.names = FALSE, quote=FALSE)
+#x = data.frame(ID_REF=rownames(dataset$E), dataset$E, check.names = FALSE)
+#write.csv(x, file="not_in_github/geosubmission/matrix_table.csv", row.names = FALSE, quote=FALSE)
 
 
 sink("sessionInfo.txt")
