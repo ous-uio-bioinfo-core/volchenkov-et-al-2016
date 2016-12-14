@@ -299,6 +299,11 @@ heatmapwrapper(ds[FS_DEG,a],
 dev.off()
 
 
+# data file for GEO
+x = data.frame(ID_REF=rownames(dataset$E), dataset$E, check.names = FALSE)
+write.csv(x, file="not_in_github/geosubmission/matrix_table.csv", row.names = FALSE, quote=FALSE)
+
+
 sink("sessionInfo.txt")
 print(sessionInfo())
 sink()
